@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نبع تل أبيض - مؤسسة المياه</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --gold: #C9A84C;
+      --gold-light: #E8D48B;
+      --navy: #1B3A5C;
+      --navy-dark: #0F2440;
+      --white: #FFFFFF;
+      --gray: #F4F6F9;
+      --text: #2D3748;
+      --sidebar-width: 260px;
+    }
+    * { font-family: 'Segoe UI', Tahoma, 'Arial', sans-serif; }
+    body { background: var(--gray); color: var(--text); }
+    
+    /* شاشة تسجيل الدخول */
+    .login-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 50%, #2C5F8A 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    .login-container::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -30%;
+      width: 80%;
+      height: 200%;
+      background: radial-gradient(ellipse, rgba(201,168,76,0.15) 0%, transparent 70%);
+      transform: rotate(-15deg);
+    }
+    .login-box {
+      background: var(--white);
+      border-radius: 20px;
+      padding: 40px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.25);
+      position: relative;
+      z-index: 1;
+      border-top: 5px solid var(--gold);
+    }
+    .login-box .emblem {
+      font-size: 60px;
+      text-align: center;
+      margin-bottom: 10px;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+    }
+    .login-box h3 { color: var(--navy); font-weight: 800; margin-bottom: 5px; }
+    .login-box .subtitle { color: #718096; font-size: 0.9rem; margin-bottom: 25px; }
+    .btn-gold { background: linear-gradient(135deg, var(--gold), #B8943E); color: white; border: none; font-weight: bold; padding: 12px; border-radius: 12px; transition: 0.3s; }
+    .btn-gold:hover { background: linear-gradient(135deg, #B8943E, #9A7B2F); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(201,168,76,0.4); }
+    .btn-navy { background: var(--navy); color: white; border: none; font-weight: bold; }
+    .btn-navy:hover { background: var(--navy-dark); }
+    
+    /* الشريط الجانبي */
+    .sidebar {
+      position: fixed; top: 0; right: 0; width: var(--sidebar-width); height: 100vh;
+      background: linear-gradient(180deg, var(--navy-dark) 0%, var(--navy) 100%);
+      color: white; padding: 0; z-index: 1000; overflow-y: auto;
+      border-left: 3px solid var(--gold);
+    }
+    .sidebar-header {
+      padding: 25px 20px; text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.15);
+      background: rgba(0,0,0,0.15);
+    }
+    .sidebar-header .emblem-small { font-size: 40px; }
+    .sidebar-header h5 { color: var(--gold-light); font-weight: 700; margin-top: 8px; font-size: 1.1rem; }
+    .sidebar-header small { color: #94a3b8; font-size: 0.75rem; }
+    .sidebar a {
+      color: #cbd5e1; text-decoration: none; padding: 14px 22px; display: flex; align-items: center;
+      gap: 12px; font-weight: 500; transition: 0.3s; border-right: 3px solid transparent;
+      font-size: 0.95rem;
+    }
+    .sidebar a:hover, .sidebar a.active {
+      background: rgba(255,255,255,0.08); color: var(--gold-light);
+      border-right-color: var(--gold);
+    }
+    .sidebar a i { width: 22px; text-align: center; font-size: 1.1rem; }
+    .sidebar-footer { padding: 20px; border-top: 1px solid rgba(255,255,255,0.15); margin-top: auto; }
+    
+    /* المحتوى الرئيسي */
+    .main-content { margin-right: var(--sidebar-width); padding: 30px; min-height: 100vh; }
+    .top-bar {
+      background: white; border-radius: 16px; padding: 18px 25px; margin-bottom: 25px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.04); display: flex; justify-content: space-between; align-items: center;
+    }
+    .top-bar h4 { color: var(--navy); font-weight: 700; margin: 0; }
+    .card { background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); border: none; margin-bottom: 22px; }
+    .card-header {
+      background: white; border-bottom: 1px solid #e2e8f0; padding: 18px 22px;
+      font-weight: 700; color: var(--navy); border-radius: 16px 16px 0 0 !important;
+    }
+    .stat-card {
+      border-radius: 16px; padding: 22px; color: white; text-align: center;
+      background: linear-gradient(135deg, var(--navy), #2C5F8A);
+      border-bottom: 4px solid var(--gold);
+    }
+    .stat-card.gold-bg { background: linear-gradient(135deg, #B8943E, var(--gold)); border-bottom: 4px solid var(--navy); }
+    .stat-card h2 { font-weight: 800; font-size: 2.2rem; }
+    .stat-card p { opacity: 0.9; font-weight: 500; }
+    
+    .table { margin: 0; }
+    .table thead { background: var(--navy); color: white; }
+    .table thead th { font-weight: 600; border: none; padding: 14px; }
+    .table tbody td { padding: 14px; vertical-align: middle; border-color: #e2e8f0; }
+    .table tbody tr:hover { background: #f8fafc; }
+    
+    .avatar-img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
+    .floating-btn {
+      position: fixed; bottom: 35px; left: 35px; width: 58px; height: 58px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold), #B8943E); color: white; font-size: 1.6rem;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 12px 30px rgba(201,168,76,0.5); cursor: pointer; border: none; z-index: 999;
+      transition: 0.3s;
+    }
+    .floating-btn:hover { transform: scale(1.08); }
+    
+    .badge-status { padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 0.8rem; }
+    .badge-permanent { background: #e6f4ea; color: #137333; }
+    .badge-temporary { background: #fef7e0; color: #b06000; }
+    
+    .modal-header { background: var(--navy); color: white; border-radius: 12px 12px 0 0; padding: 18px 22px; }
+    .modal-content { border-radius: 16px; border: none; }
+    .form-control, .form-select { border-radius: 10px; padding: 11px 16px; border: 1.5px solid #e2e8f0; transition: 0.3s; }
+    .form-control:focus, .form-select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.15); }
+    
+    .page { display: none; }
+    .page.active { display: block; }
+    
+    @media (max-width: 768px) {
+      .sidebar { width: 100%; height: auto; position: relative; border-left: none; border-bottom: 3px solid var(--gold); }
+      .main-content { margin-right: 0; padding: 15px; }
+      .sidebar a { padding: 12px 18px; }
+    }
+    
+    .official-header {
+      text-align: center; padding: 10px; margin-bottom: 15px;
+      border-bottom: 2px solid var(--gold); color: var(--navy);
+    }
+    .official-header .eagle { font-size: 35px; }
+    .print-only { display: none; }
+    @media print {
+      .sidebar, .floating-btn, .top-bar, .modal, .no-print { display: none !important; }
+      .main-content { margin: 0; padding: 0; }
+      .print-only { display: block; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ==================== شاشة تسجيل الدخول ==================== -->
+<div id="loginScreen" class="login-container">
+  <div class="login-box">
+    <div class="emblem">🦅</div>
+    <h3 class="text-center">الجمهورية العربية السورية</h3>
+    <p class="text-center subtitle">مؤسسة المياه – تل أبيض<br><strong>نظام نبع</strong></p>
+    <div id="loginForm">
+      <input type="email" id="email" class="form-control mb-3" placeholder="البريد الإلكتروني" required>
+      <input type="password" id="password" class="form-control mb-3" placeholder="كلمة المرور" required>
+      <button class="btn btn-gold w-100" onclick="login()"><i class="fas fa-sign-in-alt me-2"></i>تسجيل الدخول</button>
+      <p class="text-center mt-3"><a href="#" onclick="toggleForms()" style="color:var(--navy);">إنشاء حساب جديد</a></p>
+    </div>
+    <div id="registerForm" style="display:none;">
+      <input type="text" id="regName" class="form-control mb-3" placeholder="الاسم الكامل">
+      <input type="email" id="regEmail" class="form-control mb-3" placeholder="البريد الإلكتروني">
+      <input type="password" id="regPassword" class="form-control mb-3" placeholder="كلمة المرور (6 أحرف)">
+      <button class="btn btn-navy w-100" onclick="register()"><i class="fas fa-user-plus me-2"></i>إنشاء الحساب</button>
+      <p class="text-center mt-3"><a href="#" onclick="toggleForms()" style="color:var(--navy);">لدي حساب بالفعل</a></p>
+    </div>
+    <p id="authMsg" class="text-danger text-center mt-2 small"></p>
+  </div>
+</div>
+
+<!-- ==================== التطبيق الرئيسي ==================== -->
+<div id="appMain" style="display:none;">
+  <!-- الشريط الجانبي -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="emblem-small">🦅</div>
+      <h5>مؤسسة المياه</h5>
+      <small>نظام نبع – تل أبيض</small>
+    </div>
+    <a href="#" class="active" data-page="dashboard"><i class="fas fa-th-large"></i> الرئيسية</a>
+    <a href="#" data-page="employees"><i class="fas fa-users"></i> الموظفين</a>
+    <a href="#" data-page="leaves"><i class="fas fa-calendar-alt"></i> الإجازات</a>
+    <a href="#" data-page="messages"><i class="fas fa-envelope"></i> المراسلات</a>
+    <a href="#" data-page="logs"><i class="fas fa-history"></i> سجل النشاطات</a>
+    <div class="sidebar-footer">
+      <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> تسجيل خروج</a>
+    </div>
+  </div>
+
+  <!-- المحتوى الرئيسي -->
+  <div class="main-content">
+    <div class="top-bar no-print">
+      <h4 id="pageTitle">لوحة التحكم</h4>
+      <small><span id="currentUserDisplay"></span></small>
+    </div>
+    <div id="pageContent"></div>
+  </div>
+
+  <!-- زر إضافة عائم -->
+  <button class="floating-btn no-print" id="floatAddBtn" style="display:none;" title="إضافة سريعة">+</button>
+</div>
+
+<!-- ==================== نافذة إضافة/تعديل موظف ==================== -->
+<div class="modal fade" id="employeeModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header"><h5 id="empModalTitle">إضافة موظف جديد</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body" id="empFormBody"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+        <button class="btn btn-gold" onclick="saveEmployee()"><i class="fas fa-save me-2"></i>حفظ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== نافذة إجازة ==================== -->
+<div class="modal fade" id="leaveModal" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header bg-info text-white"><h5>طلب إجازة</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <select id="leaveEmployee" class="form-select mb-3"></select>
+      <input id="leaveType" class="form-control mb-3" placeholder="نوع الإجازة">
+      <div class="row"><div class="col"><input type="date" id="leaveStart" class="form-control mb-3"></div><div class="col"><input type="date" id="leaveEnd" class="form-control mb-3"></div></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-info text-white" onclick="saveLeave()">حفظ</button></div>
+  </div></div>
+</div>
+
+<!-- ==================== نافذة مراسلة ==================== -->
+<div class="modal fade" id="messageModal" tabindex="-1">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header bg-gold" style="background:var(--gold);"><h5>إرسال مراسلة</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input id="msgTitle" class="form-control mb-3" placeholder="عنوان المراسلة">
+      <textarea id="msgBody" class="form-control mb-3" rows="4" placeholder="نص المراسلة..."></textarea>
+    </div>
+    <div class="modal-footer"><button class="btn btn-gold" onclick="sendMessage()">إرسال</button></div>
+  </div></div>
+</div>
+
+<!-- ==================== السكربتات ==================== -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ---------- Firebase ----------
+firebase.initializeApp({
+  apiKey: "AIzaSyDY5qg-TK85O8pTGE5-qKp_j_NhHWfxVoA",
+  authDomain: "water-dept.firebaseapp.com",
+  projectId: "water-dept",
+  storageBucket: "water-dept.firebasestorage.app",
+  messagingSenderId: "65173411741",
+  appId: "1:65173411741:web:d3c55ceac2c0c328f10174"
+});
+const auth = firebase.auth();
+const db = firebase.firestore();
+const storage = firebase.storage();
+let currentUser = null;
+let editingEmpId = null;
+
+// ---------- المصادقة ----------
+function toggleForms() {
+  document.getElementById('loginForm').style.display = document.getElementById('loginForm').style.display === 'none' ? 'block' : 'none';
+  document.getElementById('registerForm').style.display = document.getElementById('registerForm').style.display === 'none' ? 'block' : 'none';
+}
+async function login() {
+  const e = document.getElementById('email').value, p = document.getElementById('password').value;
+  try { await auth.signInWithEmailAndPassword(e, p); } catch (x) { document.getElementById('authMsg').textContent = 'خطأ: ' + x.message; }
+}
+async function register() {
+  const n = document.getElementById('regName').value, e = document.getElementById('regEmail').value, p = document.getElementById('regPassword').value;
+  if (p.length < 6) { document.getElementById('authMsg').textContent = 'كلمة المرور قصيرة'; return; }
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(e, p);
+    await db.collection('users').doc(cred.user.uid).set({ name: n, email: e, role: 'admin' });
+  } catch (x) { document.getElementById('authMsg').textContent = 'خطأ: ' + x.message; }
+}
+function logout() { auth.signOut(); }
+auth.onAuthStateChanged(user => {
+  if (user) {
+    currentUser = user;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appMain').style.display = 'block';
+    document.getElementById('currentUserDisplay').textContent = '👤 ' + (user.email || 'مستخدم');
+    loadPage('dashboard');
+  } else {
+    currentUser = null;
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('appMain').style.display = 'none';
+  }
+});
+
+// ---------- التنقل ----------
+document.querySelectorAll('.sidebar a[data-page]').forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+    link.classList.add('active');
+    loadPage(link.dataset.page);
+  });
+});
+document.getElementById('floatAddBtn').addEventListener('click', () => openEmployeeModal());
+
+// ---------- تحميل الصفحات ----------
+function loadPage(page) {
+  const content = document.getElementById('pageContent');
+  const floatBtn = document.getElementById('floatAddBtn');
+  floatBtn.style.display = (page === 'employees') ? 'flex' : 'none';
+  document.getElementById('pageTitle').textContent = { dashboard: 'لوحة التحكم', employees: 'إدارة الموظفين', leaves: 'سجل الإجازات', messages: 'المراسلات الداخلية', logs: 'سجل النشاطات' }[page] || '';
+
+  switch(page) {
+    case 'dashboard':
+      content.innerHTML = `<div class="row" id="statsRow"></div><div class="row mt-3"><div class="col-md-7"><div class="card"><div class="card-header">📊 توزيع الأقسام</div><div class="card-body"><canvas id="deptChart" height="280"></canvas></div></div></div><div class="col-md-5"><div class="card"><div class="card-header">🔔 تنبيهات</div><div class="card-body"><ul id="alertList" class="list-unstyled mb-0"></ul></div></div></div></div>`;
+      loadDashboard(); break;
+    case 'employees':
+      content.innerHTML = `<div class="card"><div class="card-header d-flex justify-content-between align-items-center"><span>👥 قائمة الموظفين</span><div class="d-flex gap-2"><input id="searchEmp" class="form-control form-control-sm" placeholder="🔍 بحث..." oninput="loadEmployees()" style="width:200px;"><select id="deptFilter" class="form-select form-select-sm" onchange="loadEmployees()" style="width:160px;"><option value="">كل الأقسام</option></select><button class="btn btn-sm btn-success" onclick="exportExcel()" title="Excel"><i class="fas fa-file-excel"></i></button><button class="btn btn-sm btn-danger" onclick="exportPDF()" title="PDF"><i class="fas fa-file-pdf"></i></button><button class="btn btn-sm btn-gold" onclick="openEmployeeModal()"><i class="fas fa-plus"></i> إضافة</button></div></div><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>صورة</th><th>الرقم</th><th>الاسم</th><th>القسم</th><th>الهاتف</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody id="empTableBody"></tbody></table></div></div></div>`;
+      loadEmployees(); break;
+    case 'leaves':
+      content.innerHTML = `<div class="card"><div class="card-header d-flex justify-content-between"><span>📅 سجل الإجازات</span><button class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#leaveModal" onclick="loadLeaveForm()"><i class="fas fa-plus"></i> إجازة</button></div><div class="card-body p-0"><table class="table"><thead><tr><th>الموظف</th><th>النوع</th><th>من</th><th>إلى</th><th></th></tr></thead><tbody id="leaveTableBody"></tbody></table></div></div>`;
+      loadLeaves(); break;
+    case 'messages':
+      content.innerHTML = `<div class="card"><div class="card-header d-flex justify-content-between"><span>📨 المراسلات الداخلية</span><button class="btn btn-sm btn-gold" data-bs-toggle="modal" data-bs-target="#messageModal"><i class="fas fa-pen"></i> مراسلة جديدة</button></div><div class="card-body" id="messagesList"></div></div>`;
+      loadMessages(); break;
+    case 'logs':
+      content.innerHTML = `<div class="card"><div class="card-header">📋 سجل النشاطات</div><div class="card-body"><ul class="list-group list-group-flush" id="logList"></ul></div></div>`;
+      loadLogs(); break;
+  }
+}
+
+// ---------- حقول الموظف ----------
+const empFields = [
+  {id:'empId',label:'الرقم الوظيفي *',type:'text',req:true},
+  {id:'firstName',label:'الاسم *',type:'text',req:true},
+  {id:'lastName',label:'الكنية *',type:'text',req:true},
+  {id:'fatherName',label:'اسم الأب',type:'text'},
+  {id:'motherName',label:'اسم الأم',type:'text'},
+  {id:'phone',label:'الهاتف *',type:'text',req:true},
+  {id:'location',label:'المكان',type:'text'},
+  {id:'birthDate',label:'تاريخ الولادة',type:'date'},
+  {id:'regPlace',label:'مكان القيد',type:'text'},
+  {id:'nationalId',label:'الرقم الوطني',type:'text'},
+  {id:'jobTitle',label:'المسمى الوظيفي',type:'text'},
+  {id:'department',label:'القسم',type:'text'},
+  {id:'hireDate',label:'تاريخ التعيين',type:'date'},
+  {id:'contractType',label:'نوع العقد',type:'select',opts:['دائم','مؤقت','موسمي']},
+  {id:'salary',label:'الراتب',type:'number'},
+  {id:'maritalStatus',label:'الحالة الاجتماعية',type:'text'},
+  {id:'childrenCount',label:'عدد الأولاد',type:'number'},
+  {id:'address',label:'عنوان السكن',type:'text'},
+  {id:'serviceArea',label:'منطقة الخدمة',type:'text'},
+  {id:'facility',label:'المنشأة',type:'text'},
+  {id:'vehicleNo',label:'رقم المركبة',type:'text'},
+  {id:'license',label:'رخصة القيادة',type:'text'},
+  {id:'equipment',label:'المعدات',type:'text'},
+  {id:'iban',label:'IBAN',type:'text'},
+  {id:'insurance',label:'التأمين',type:'text'},
+  {id:'insuranceNo',label:'رقم التأمين',type:'text'},
+  {id:'lastPromotion',label:'آخر ترقية',type:'date'},
+];
+
+function buildEmpForm(data = {}) {
+  let h = '<div class="row g-3">';
+  empFields.forEach(f => {
+    h += '<div class="col-md-4"><label class="form-label">' + f.label + '</label>';
+    if (f.type === 'select') h += '<select class="form-select" id="' + f.id + '">' + f.opts.map(o => '<option ' + (data[f.id] === o ? 'selected' : '') + '>' + o + '</option>').join('') + '</select>';
+    else h += '<input type="' + f.type + '" class="form-control" id="' + f.id + '" value="' + (data[f.id] || '') + '" ' + (f.req ? 'required' : '') + '>';
+    h += '</div>';
+  });
+  h += '<div class="col-md-4"><label>الصورة</label><input type="file" id="photoFile" accept="image/*" onchange="previewPhoto()"></div>';
+  h += '<div class="col-md-4"><img id="photoPreview" class="avatar-img" style="width:60px;height:60px;display:' + (data.photoURL ? 'block' : 'none') + ';" src="' + (data.photoURL || '') + '"></div>';
+  h += '</div>';
+  document.getElementById('empFormBody').innerHTML = h;
+}
+function previewPhoto() {
+  const f = document.getElementById('photoFile').files[0];
+  if (f) { const r = new FileReader(); r.onload = e => { const p = document.getElementById('photoPreview'); p.src = e.target.result; p.style.display = 'block'; }; r.readAsDataURL(f); }
+}
+function openEmployeeModal(empData = null) {
+  editingEmpId = empData ? empData.id : null;
+  document.getElementById('empModalTitle').textContent = empData ? 'تعديل موظف' : 'إضافة موظف';
+  buildEmpForm(empData || {});
+  new bootstrap.Modal(document.getElementById('employeeModal')).show();
+}
+async function saveEmployee() {
+  const data = {}; empFields.forEach(f => data[f.id] = document.getElementById(f.id).value);
+  const file = document.getElementById('photoFile').files[0];
+  if (file) { const ref = storage.ref('photos/' + Date.now()); await ref.put(file); data.photoURL = await ref.getDownloadURL(); }
+  else if (editingEmpId) { const old = (await db.collection('employees').doc(editingEmpId).get()).data(); data.photoURL = old?.photoURL || ''; }
+  if (editingEmpId) { await db.collection('employees').doc(editingEmpId).update(data); addLog('عدّل بيانات: ' + data.firstName + ' ' + data.lastName); }
+  else { await db.collection('employees').add(data); addLog('أضاف موظف: ' + data.firstName + ' ' + data.lastName); }
+  bootstrap.Modal.getInstance(document.getElementById('employeeModal')).hide();
+  loadEmployees(); loadDashboard();
+}
+async function deleteEmployee(id) {
+  if (!confirm('حذف الموظف؟')) return;
+  const emp = (await db.collection('employees').doc(id).get()).data();
+  await db.collection('employees').doc(id).delete();
+  addLog('حذف الموظف: ' + emp.firstName + ' ' + emp.lastName);
+  loadEmployees(); loadDashboard();
+}
+async function loadEmployees() {
+  const search = (document.getElementById('searchEmp')?.value || '').toLowerCase();
+  const dept = document.getElementById('deptFilter')?.value || '';
+  const snap = await db.collection('employees').get();
+  const tbody = document.getElementById('empTableBody');
+  const deptSet = new Set();
+  tbody.innerHTML = '';
+  snap.forEach(doc => {
+    const e = doc.data(); e.id = doc.id;
+    deptSet.add(e.department || '');
+    if (search && !Object.values(e).some(v => String(v).toLowerCase().includes(search))) return;
+    if (dept && e.department !== dept) return;
+    tbody.innerHTML += `<tr>
+      <td>${e.photoURL ? '<img src="' + e.photoURL + '" class="avatar-img">' : '—'}</td>
+      <td>${e.empId||''}</td><td>${e.firstName||''} ${e.lastName||''}</td><td>${e.department||''}</td><td>${e.phone||''}</td>
+      <td><span class="badge-status ${e.contractType==='دائم'?'badge-permanent':'badge-temporary'}">${e.contractType||''}</span></td>
+      <td>
+        <button class="btn btn-sm btn-outline-warning" onclick="openEmployeeModal({id:'${doc.id}',...${JSON.stringify(e).replace(/"/g,'&quot;')}})">✏️</button>
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteEmployee('${doc.id}')">🗑️</button>
+        <button class="btn btn-sm btn-outline-info" onclick="printCard('${doc.id}')">🪪</button>
+      </td></tr>`;
+  });
+  const sel = document.getElementById('deptFilter');
+  if (sel) { sel.innerHTML = '<option value="">كل الأقسام</option>'; deptSet.forEach(d => { if (d) sel.innerHTML += '<option>' + d + '</option>'; }); }
+}
+
+// ---------- تصدير Excel ----------
+async function exportExcel() {
+  const snap = await db.collection('employees').get();
+  const data = [];
+  snap.forEach(d => { const e = d.data(); data.push({'الرقم':e.empId,'الاسم':e.firstName,'الكنية':e.lastName,'القسم':e.department,'الهاتف':e.phone,'العقد':e.contractType,'الراتب':e.salary}); });
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'الموظفين');
+  XLSX.writeFile(wb, 'موظفين_مؤسسة_المياه.xlsx');
+  addLog('صدّر ملف Excel');
+}
+
+// ---------- تصدير PDF ----------
+async function exportPDF() {
+  const snap = await db.collection('employees').get();
+  let html = '<div class="official-header"><div class="eagle">🦅</div><h4>الجمهورية العربية السورية</h4><h5>مؤسسة المياه – تل أبيض</h5><p>كشف بأسماء الموظفين</p></div>';
+  html += '<table border="1" style="width:100%;border-collapse:collapse;direction:rtl;text-align:center;">';
+  html += '<tr style="background:#1B3A5C;color:white;"><th>الرقم</th><th>الاسم</th><th>الكنية</th><th>القسم</th><th>الهاتف</th><th>العقد</th></tr>';
+  snap.forEach(d => { const e = d.data(); html += `<tr><td>${e.empId||''}</td><td>${e.firstName||''}</td><td>${e.lastName||''}</td><td>${e.department||''}</td><td>${e.phone||''}</td><td>${e.contractType||''}</td></tr>`; });
+  html += '</table>';
+  const div = document.createElement('div'); div.innerHTML = html; div.style.position = 'absolute'; div.style.right = '-9999px'; div.style.width = '1000px';
+  document.body.appendChild(div);
+  const canvas = await html2canvas(div, { scale: 2 });
+  document.body.removeChild(div);
+  const pdf = new jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 297, (canvas.height * 297) / canvas.width);
+  pdf.save('موظفين_مؤسسة_المياه.pdf');
+  addLog('صدّر ملف PDF');
+}
+
+// ---------- بطاقة تعريف ----------
+async function printCard(id) {
+  const emp = (await db.collection('employees').doc(id).get()).data();
+  const win = window.open('', '_blank', 'width=600,height=400');
+  win.document.write(`
+    <html dir="rtl"><head><style>
+      body{font-family:'Segoe UI',Tahoma;text-align:center;padding:20px;}
+      .card{border:3px solid #C9A84C;border-radius:15px;padding:20px;width:350px;margin:auto;background:linear-gradient(white,#f9f6ee);}
+      .eagle{font-size:40px;} h4{color:#1B3A5C;margin:5px;} .name{font-size:1.4rem;font-weight:bold;color:#1B3A5C;}
+      .dept{color:#C9A84C;font-weight:bold;}
+      img{border-radius:10px;border:3px solid #C9A84C;margin:10px;}
+    </style></head><body>
+    <div class="card">
+      <div class="eagle">🦅</div>
+      <h4>مؤسسة المياه – تل أبيض</h4>
+      ${emp.photoURL ? '<img src="'+emp.photoURL+'" width="100" height="100" style="object-fit:cover;">' : ''}
+      <p class="name">${emp.firstName||''} ${emp.lastName||''}</p>
+      <p class="dept">${emp.jobTitle||''} – ${emp.department||''}</p>
+      <p>الرقم الوظيفي: ${emp.empId||''}</p>
+      <p>📞 ${emp.phone||''}</p>
+      <small style="color:gray;">بطاقة تعريف – غير صالحة خارج المؤسسة</small>
+    </div>
+    <script>window.print();<\/script>
+    </body></html>
+  `);
+  addLog('طبع بطاقة: ' + emp.firstName + ' ' + emp.lastName);
+}
+
+// ---------- الإجازات ----------
+async function loadLeaveForm() {
+  const sel = document.getElementById('leaveEmployee');
+  sel.innerHTML = '';
+  (await db.collection('employees').get()).forEach(d => sel.innerHTML += `<option value="${d.id}">${d.data().firstName} ${d.data().lastName}</option>`);
+}
+async function saveLeave() {
+  await db.collection('leaves').add({
+    employeeId: document.getElementById('leaveEmployee').value,
+    type: document.getElementById('leaveType').value,
+    start: document.getElementById('leaveStart').value,
+    end: document.getElementById('leaveEnd').value
+  });
+  bootstrap.Modal.getInstance(document.getElementById('leaveModal')).hide();
+  addLog('أضاف إجازة جديدة');
+  loadLeaves();
+}
+async function loadLeaves() {
+  const tbody = document.getElementById('leaveTableBody'); tbody.innerHTML = '';
+  for (let d of (await db.collection('leaves').get()).docs) {
+    const l = d.data();
+    const empDoc = await db.collection('employees').doc(l.employeeId).get();
+    const emp = empDoc.data();
+    tbody.innerHTML += `<tr><td>${emp?.firstName||''} ${emp?.lastName||''}</td><td>${l.type}</td><td>${l.start}</td><td>${l.end}</td><td><button class="btn btn-sm btn-outline-danger" onclick="db.collection('leaves').doc('${d.id}').delete();loadLeaves();">حذف</button></td></tr>`;
+  }
+}
+
+// ---------- المراسلات ----------
+async function sendMessage() {
+  await db.collection('messages').add({
+    title: document.getElementById('msgTitle').value,
+    body: document.getElementById('msgBody').value,
+    sender: currentUser.email,
+    timestamp: new Date()
+  });
+  bootstrap.Modal.getInstance(document.getElementById('messageModal')).hide();
+  addLog('أرسل مراسلة: ' + document.getElementById('msgTitle').value);
+  loadMessages();
+}
+async function loadMessages() {
+  const list = document.getElementById('messagesList');
+  list.innerHTML = '';
+  (await db.collection('messages').orderBy('timestamp', 'desc').get()).forEach(d => {
+    const m = d.data();
+    list.innerHTML += `<div class="border-bottom p-3"><strong>📨 ${m.title}</strong><br><small class="text-muted">من: ${m.sender} | ${m.timestamp?.toDate?.()?.toLocaleString?.()||''}</small><p class="mt-2 mb-0">${m.body}</p></div>`;
+  });
+}
+
+// ---------- لوحة التحكم ----------
+async function loadDashboard() {
+  const snap = await db.collection('employees').get();
+  const emps = snap.docs.map(d => d.data());
+  document.getElementById('statsRow').innerHTML = `
+    <div class="col-md-3"><div class="stat-card"><h2>${emps.length}</h2><p>إجمالي الموظفين</p></div></div>
+    <div class="col-md-3"><div class="stat-card gold-bg"><h2>${emps.filter(e=>e.contractType==='دائم').length}</h2><p>عقود دائمة</p></div></div>
+    <div class="col-md-3"><div class="stat-card"><h2>${emps.filter(e=>e.contractType==='مؤقت').length}</h2><p>عقود مؤقتة</p></div></div>
+    <div class="col-md-3"><div class="stat-card gold-bg"><h2>${new Set(emps.map(e=>e.department).filter(Boolean)).size}</h2><p>قسم</p></div></div>`;
+  const depts = {}; emps.forEach(e => { const d = e.department || 'غير محدد'; depts[d] = (depts[d] || 0) + 1; });
+  if (window._chart) window._chart.destroy();
+  const ctx = document.getElementById('deptChart');
+  if (ctx) window._chart = new Chart(ctx, { type: 'doughnut', data: { labels: Object.keys(depts), datasets: [{ data: Object.values(depts), backgroundColor: ['#1B3A5C','#C9A84C','#2C5F8A','#E8D48B','#0F2440','#B8943E'] }] } });
+  const alerts = [];
+  emps.forEach(e => {
+    if (e.birthDate && new Date(e.birthDate).getMonth() === new Date().getMonth()) alerts.push('🎂 عيد ميلاد: ' + e.firstName + ' ' + e.lastName);
+    if (e.contractType === 'مؤقت' && e.hireDate) {
+      const end = new Date(e.hireDate); end.setFullYear(end.getFullYear() + 1);
+      if (end > new Date() && end < new Date(Date.now() + 30 * 86400000)) alerts.push('⏳ عقد ينتهي قريباً: ' + e.firstName + ' ' + e.lastName);
+    }
+  });
+  document.getElementById('alertList').innerHTML = alerts.length ? alerts.map(a => '<li>• ' + a + '</li>').join('') : '<li class="text-muted">لا توجد تنبيهات حالية ✅</li>';
+}
+
+// ---------- السجلات ----------
+async function addLog(msg) { await db.collection('logs').add({ message: msg, user: currentUser?.email || '', timestamp: new Date() }); }
+async function loadLogs() {
+  const list = document.getElementById('logList'); list.innerHTML = '';
+  (await db.collection('logs').orderBy('timestamp', 'desc').limit(50).get()).forEach(d => {
+    list.innerHTML += '<li class="list-group-item">' + d.data().message + ' <small class="text-muted">(' + d.data().user + ' - ' + (d.data().timestamp?.toDate?.()?.toLocaleString?.()||'') + ')</small></li>';
+  });
+}
+</script>
+</body>
+</html>
