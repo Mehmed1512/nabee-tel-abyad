@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نبع - مديرية مياه تل أبيض</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --gold: #988561; --gold-light: #c4a87c; --navy: #1B3A5C; --navy-dark: #0F2440; --navy-light: #264a73;
+      --bg: #f4f6f9; --card-bg: #ffffff; --text: #2D3748; --text-muted: #718096; --border: #e2e8f0; --sidebar-width: 280px;
+    }
+    body.dark {
+      --bg: #1a202c; --card-bg: #2d3748; --text: #e2e8f0; --text-muted: #a0aec0; --border: #4a5568;
+    }
+    * { box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', Tahoma, sans-serif; transition: background 0.3s, color 0.3s; margin: 0; }
+    .login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--navy-dark), var(--navy)); }
+    .login-box { background: var(--card-bg); border-radius: 24px; padding: 2.5rem; width: 100%; max-width: 450px; box-shadow: 0 30px 60px rgba(0,0,0,0.25); text-align: center; }
+    .login-box img { width: 130px; margin-bottom: 15px; }
+    .login-box h4 { color: var(--navy); font-weight: 700; } .dark .login-box h4 { color: var(--gold); }
+    .btn-gold { background: var(--gold); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: bold; transition: 0.3s; }
+    .btn-gold:hover { background: var(--gold-light); color: white; }
+    .btn-navy { background: var(--navy); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: bold; transition: 0.3s; }
+    .btn-navy:hover { background: var(--navy-light); }
+    .sidebar { position: fixed; top: 0; right: 0; width: var(--sidebar-width); height: 100vh; background: var(--navy-dark); color: white; z-index: 999; overflow-y: auto; border-left: 4px solid var(--gold); transition: all 0.3s; }
+    .sidebar-header { background: rgba(0,0,0,0.3); padding: 20px; text-align: center; }
+    .sidebar-header img { width: 90px; margin-bottom: 8px; }
+    .sidebar-header h5 { color: var(--gold); margin-top: 8px; font-weight: 700; }
+    .sidebar a { color: #cbd5e1; display: flex; align-items: center; gap: 10px; padding: 14px 20px; text-decoration: none; font-weight: 500; border-radius: 8px; margin: 4px 10px; transition: 0.2s; }
+    .sidebar a:hover, .sidebar a.active { background: rgba(255,255,255,0.1); color: var(--gold); }
+    .main-content { margin-right: var(--sidebar-width); padding: 25px; transition: margin 0.3s; }
+    .card { background: var(--card-bg); border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); border: 1px solid var(--border); margin-bottom: 20px; transition: background 0.3s; }
+    .card-header { font-weight: 700; color: var(--navy); padding: 15px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .dark .card-header { color: var(--gold); }
+    .stat-card { background: var(--navy); color: white; border-radius: 14px; padding: 22px 18px; border-bottom: 4px solid var(--gold); text-align: center; transition: transform 0.2s; }
+    .stat-card:hover { transform: translateY(-3px); }
+    .stat-card.gold { background: var(--gold); color: var(--navy); border-bottom: 4px solid var(--navy); }
+    .stat-card h3 { font-size: 2rem; font-weight: 800; margin: 0; }
+    .stat-card p { margin: 5px 0 0; opacity: 0.9; font-size: 0.9rem; }
+    .avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
+    .id-photo { width: 140px; height: 90px; object-fit: cover; border: 2px solid var(--border); border-radius: 8px; }
+    .floating-btn { position: fixed; bottom: 30px; left: 30px; width: 58px; height: 58px; border-radius: 50%; background: var(--gold); color: white; font-size: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: none; z-index: 1000; transition: 0.3s; }
+    .floating-btn:hover { transform: scale(1.1); background: var(--navy); }
+    .table th { background: var(--navy); color: white; font-weight: 600; }
+    .table td { vertical-align: middle; }
+    .dark .table td, .dark .table th { background: #2d3748; color: #e2e8f0; border-color: #4a5568; }
+    .dark .table th { background: var(--navy-dark); }
+    .dark .form-control, .dark .form-select { background: #1a202c; color: #e2e8f0; border-color: #4a5568; }
+    .dark .form-control:focus, .dark .form-select:focus { border-color: var(--gold); box-shadow: 0 0 0 0.2rem rgba(152,133,97,0.25); }
+    .badge-status { padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; }
+    .alert-item { padding: 10px 15px; border-right: 3px solid var(--gold); margin-bottom: 8px; background: rgba(152,133,97,0.05); border-radius: 0 8px 8px 0; }
+    .detail-label { font-weight: bold; color: var(--navy); min-width: 120px; display: inline-block; }
+    .dark .detail-label { color: var(--gold); }
+    .dark .text-muted { color: #a0aec0 !important; }
+    .dark .btn-outline-info, .dark .btn-outline-warning, .dark .btn-outline-danger, .dark .btn-outline-secondary { color: #e2e8f0; border-color: #4a5568; }
+    .dark .btn-outline-info:hover { background: #0dcaf0; color: black; }
+    .dark .btn-outline-warning:hover { background: #ffc107; color: black; }
+    .dark .btn-outline-danger:hover { background: #dc3545; color: white; }
+    .dark .btn-outline-secondary:hover { background: #6c757d; color: white; }
+    .dark .modal-content { background: #2d3748; color: #e2e8f0; }
+    .dark .modal-header { border-bottom-color: #4a5568; }
+    .dark .btn-close { filter: invert(1); }
+    .section-title { font-weight: 700; color: var(--navy); margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid var(--gold); display: inline-block; }
+    .dark .section-title { color: var(--gold); }
+    .clock-box { background: var(--navy); color: white; border-radius: 12px; padding: 10px 20px; display: inline-block; font-size: 1.2rem; font-weight: bold; }
+    .dark .clock-box { background: #1a202c; }
+    .archived-row { opacity: 0.6; background: #f8f9fa; }
+    .dark .archived-row { background: #1a2535; }
+    .document-item { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
+    @media (max-width: 768px) { .sidebar { width: 100%; height: auto; position: relative; border-left: none; border-bottom: 4px solid var(--gold); } .main-content { margin-right: 0; } }
+  </style>
+</head>
+<body>
+
+<div id="loginScreen" class="login-screen">
+  <div class="login-box">
+    <img id="loginEmblem" src="./emblem.png" alt="شعار الجمهورية العربية السورية">
+    <h4>الجمهورية العربية السورية</h4>
+    <h6 class="text-muted mb-3">مديرية مياه تل أبيض - نظام نبع</h6>
+    <input type="email" id="email" class="form-control my-2" placeholder="البريد الإلكتروني" required>
+    <input type="password" id="password" class="form-control my-2" placeholder="كلمة المرور" required>
+    <button class="btn btn-gold w-100 my-1" onclick="login()">دخول</button>
+    <p id="authMsg" class="text-danger small mt-2"></p>
+  </div>
+</div>
+
+<div id="appMain" style="display:none;">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <img id="sidebarEmblem" src="./emblem.png" alt="شعار">
+      <h5>مديرية مياه تل أبيض</h5>
+      <small>نظام نبع</small>
+    </div>
+    <a href="#" data-page="dashboard" class="active"><i class="fas fa-th-large"></i> الرئيسية</a>
+    <a href="#" data-page="employees"><i class="fas fa-users"></i> الموظفين</a>
+    <a href="#" data-page="salaries"><i class="fas fa-money-bill-wave"></i> الرواتب</a>
+    <a href="#" data-page="collections"><i class="fas fa-coins"></i> الجباية</a>
+    <a href="#" data-page="accounting"><i class="fas fa-book"></i> السجلات المحاسبية</a>
+    <a href="#" data-page="leaves"><i class="fas fa-calendar-alt"></i> الإجازات</a>
+    <a href="#" data-page="reports"><i class="fas fa-chart-bar"></i> التقارير</a>
+    <a href="#" data-page="logs"><i class="fas fa-history"></i> سجل النشاطات</a>
+    <a href="#" id="darkToggle"><i class="fas fa-moon"></i> الوضع الليلي</a>
+    <a href="#" onclick="auth.signOut()"><i class="fas fa-sign-out-alt"></i> خروج</a>
+  </div>
+  <div class="main-content" id="mainContent"></div>
+  <button class="floating-btn" id="floatAddBtn" style="display:none;" onclick="openEmployeeModal()">+</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ========== إعدادات الشعار (مسار نسبي) ==========
+const EMBLEM_URL = "./emblem.png"; // المسار المحلي
+
+// ========== Firebase ==========
+const firebaseConfig = {
+  apiKey: "AIzaSyDY5qg-TK85O8pTGE5-qKp_j_NhHWfxVoA",
+  authDomain: "water-dept.firebaseapp.com",
+  projectId: "water-dept",
+  storageBucket: "water-dept.firebasestorage.app",
+  messagingSenderId: "65173411741",
+  appId: "1:65173411741:web:d3c55ceac2c0c328f10174"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ========== المتغيرات العامة ==========
+const loginScreen = document.getElementById('loginScreen');
+const appMain = document.getElementById('appMain');
+const mainContent = document.getElementById('mainContent');
+const floatAddBtn = document.getElementById('floatAddBtn');
+let currentUser = null;
+let editingId = null;
+let empPhoto = '', idFrontPhoto = '', idBackPhoto = '';
+let lastReportHTML = '';
+
+// ========== الوضع الليلي ==========
+const darkToggle = document.getElementById('darkToggle');
+darkToggle.addEventListener('click', e => {
+  e.preventDefault();
+  document.body.classList.toggle('dark');
+  const isDark = document.body.classList.contains('dark');
+  darkToggle.innerHTML = isDark ? '<i class="fas fa-sun"></i> الوضع النهاري' : '<i class="fas fa-moon"></i> الوضع الليلي';
+  localStorage.setItem('darkMode', isDark);
+});
+if (localStorage.getItem('darkMode') === 'true') {
+  document.body.classList.add('dark');
+  darkToggle.innerHTML = '<i class="fas fa-sun"></i> الوضع النهاري';
+}
+
+// ========== المصادقة ==========
+function login() {
+  auth.signInWithEmailAndPassword(email.value, password.value).catch(e => authMsg.innerText = e.message);
+}
+auth.onAuthStateChanged(user => {
+  if (user) { currentUser = user; loginScreen.style.display = 'none'; appMain.style.display = 'block'; loadPage('dashboard'); }
+  else { loginScreen.style.display = 'flex'; appMain.style.display = 'none'; }
+});
+
+// ========== التنقل ==========
+document.querySelectorAll('.sidebar a[data-page]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); loadPage(e.currentTarget.dataset.page); }));
+function loadPage(page) {
+  document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+  const link = document.querySelector(`.sidebar a[data-page="${page}"]`);
+  if (link) link.classList.add('active');
+  floatAddBtn.style.display = (page === 'employees') ? 'flex' : 'none';
+  if (page === 'dashboard') loadDashboard();
+  else if (page === 'employees') loadEmployeesPage();
+  else if (page === 'salaries') loadSalariesPage();
+  else if (page === 'collections') loadCollectionsPage();
+  else if (page === 'accounting') loadAccountingPage();
+  else if (page === 'leaves') loadLeavesPage();
+  else if (page === 'reports') loadReportsPage();
+  else if (page === 'logs') loadLogsPage();
+}
+
+// ========== الساعة ==========
+function updateClock() {
+  const now = new Date();
+  document.getElementById('liveClock').innerHTML = now.toLocaleTimeString('ar-SY');
+  document.getElementById('liveDate').innerHTML = now.toLocaleDateString('ar-SY', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+setInterval(updateClock, 1000);
+
+// ========== طباعة التقرير ==========
+function printReportContent(html) {
+  const w = window.open('', '', 'width=900,height=700');
+  w.document.write(`<html dir="rtl"><head><style>body{font-family:Tahoma;padding:20px;text-align:center}img{width:80px}table{margin:20px auto;border-collapse:collapse;width:95%}th{background:#1B3A5C;color:white;padding:10px}td{border:1px solid #ddd;padding:8px}h3{color:#1B3A5C}</style></head><body>${html}<script>window.print()</`+`script></body></html>`);
+}
+
+// ========== اللوحة الرئيسية ==========
+async function loadDashboard() {
+  mainContent.innerHTML = `
+    <div class="row mb-4"><div class="col-md-6"><h4 class="section-title"><i class="fas fa-tachometer-alt"></i> لوحة التحكم</h4></div><div class="col-md-6 text-start"><div class="clock-box"><span id="liveClock">00:00:00</span> | <span id="liveDate">السبت، 1 يناير 2025</span></div></div></div>
+    <div class="card mb-3"><div class="card-header" style="background: var(--gold-light); color: var(--navy);"><i class="fas fa-bullhorn"></i> الإعلانات <button class="btn btn-sm btn-navy" onclick="addAnnouncement()">+ إضافة إعلان</button></div><div class="card-body" id="announcementsBody"></div></div>
+    <div class="row" id="statsRow"></div>
+    <div class="row mt-3">
+      <div class="col-md-7"><div class="card"><div class="card-header"><i class="fas fa-chart-pie"></i> توزيع الأقسام</div><div class="card-body"><canvas id="deptChart"></canvas></div></div></div>
+      <div class="col-md-5"><div class="card"><div class="card-header"><i class="fas fa-bell"></i> تنبيهات</div><div class="card-body" id="alerts"></div></div></div>
+    </div>`;
+  updateClock();
+  const annSnap = await db.collection('announcements').orderBy('createdAt','desc').limit(5).get();
+  let annHTML = '';
+  annSnap.forEach(doc => { const a = doc.data(); annHTML += `<div class="alert-item">📢 ${a.text} <small class="text-muted">(${a.date})</small></div>`; });
+  document.getElementById('announcementsBody').innerHTML = annHTML || '<p class="text-muted">لا توجد إعلانات حالياً</p>';
+  const snap = await db.collection('employees').get();
+  const emps = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const now = new Date();
+  const activeEmps = emps.filter(e => !e.status || e.status === 'نشط').length;
+  const archivedEmps = emps.filter(e => e.status === 'مؤرشف').length;
+  const depts = {};
+  emps.filter(e => e.status !== 'مؤرشف').forEach(e => { const d = e.dept || 'غير محدد'; depts[d] = (depts[d] || 0) + 1; });
+  document.getElementById('statsRow').innerHTML = `
+    <div class="col-md-3 mb-3"><div class="stat-card"><h3>${emps.length - archivedEmps}</h3><p>إجمالي الموظفين</p></div></div>
+    <div class="col-md-3 mb-3"><div class="stat-card gold"><h3>${activeEmps}</h3><p>النشطين</p></div></div>
+    <div class="col-md-3 mb-3"><div class="stat-card"><h3>${archivedEmps}</h3><p>مؤرشفين</p></div></div>
+    <div class="col-md-3 mb-3"><div class="stat-card gold"><h3>${Object.keys(depts).length}</h3><p>الأقسام</p></div></div>`;
+  new Chart(deptChart, {
+    type: 'doughnut',
+    data: { labels: Object.keys(depts), datasets: [{ data: Object.values(depts), backgroundColor: ['#988561','#1B3A5C','#264a73','#c4a87c','#4a5568','#718096'] }] }
+  });
+  const birthdays = emps.filter(e => e.birthDate && new Date(e.birthDate).getMonth() === now.getMonth());
+  const contractsEnding = emps.filter(e => e.contractEnd && new Date(e.contractEnd) < new Date(now.getTime() + 30*24*60*60*1000));
+  let alertHTML = '';
+  if (birthdays.length > 0) alertHTML += `<div class="alert-item">🎂 ${birthdays.length} موظف يحتفل بعيد ميلاده هذا الشهر</div>`;
+  if (contractsEnding.length > 0) alertHTML += `<div class="alert-item">⚠️ ${contractsEnding.length} عقد عمل سينتهي قريباً</div>`;
+  document.getElementById('alerts').innerHTML = alertHTML || '<p class="text-muted">✅ لا توجد تنبيهات حالياً</p>';
+}
+
+async function addAnnouncement() {
+  const text = prompt('أدخل نص الإعلان:');
+  if (text) {
+    await db.collection('announcements').add({ text, date: new Date().toLocaleDateString('ar-SY'), createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    loadDashboard();
+  }
+}
+
+// ========== الموظفين (بما في ذلك شام كاش) ==========
+const fields = [
+  ['firstName','الاسم'],['lastName','الكنية'],['fatherName','اسم الأب'],['motherName','اسم الأم'],
+  ['phone','الهاتف'],['location','المكان'],['birthDate','تاريخ الولادة'],['regPlace','مكان القيد'],
+  ['dept','القسم'],['jobTitle','المسمى'],['hireDate','تاريخ التعيين'],['contractType','نوع العقد'],
+  ['contractEnd','تاريخ انتهاء العقد'],['status','الحالة الوظيفية'],['education','المؤهل العلمي'],
+  ['salary','الراتب الأساسي'],['email','البريد الإلكتروني'],['maritalStatus','الحالة العائلية'],
+  ['children','عدد الأولاد'],['insurance','رقم التأمين'],['military','الخدمة العسكرية'],
+  ['empId','الرقم الوظيفي'],['allowances','البدلات'],
+  ['chamCashNumber','رقم شام كاش'],
+  ['paymentMethod','طريقة الدفع']
+];
+
+function loadEmployeesPage() {
+  mainContent.innerHTML = `
+    <div class="card"><div class="card-header"><span><i class="fas fa-users"></i> الموظفين</span>
+      <div class="d-flex flex-wrap gap-2">
+        <input id="searchEmp" class="form-control d-inline" style="width:200px" placeholder="🔍 بحث..." oninput="loadEmployees()">
+        <select id="filterStatus" class="form-select d-inline w-auto" onchange="loadEmployees()"><option value="all">الكل</option><option value="active">النشطين</option><option value="archived">المؤرشفين</option></select>
+        <button class="btn btn-gold btn-sm" onclick="openEmployeeModal()"><i class="fas fa-plus"></i> إضافة</button>
+        <button class="btn btn-sm btn-success" onclick="exportExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+        <button class="btn btn-sm btn-danger" onclick="exportPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+        <button class="btn btn-sm btn-info" onclick="downloadBackup()"><i class="fas fa-download"></i> نسخة احتياطية</button>
+      </div>
+    </div>
+    <div class="table-responsive"><table class="table table-hover"><thead><tr><th>صورة</th><th>الاسم</th><th>القسم</th><th>المسمى</th><th>الهاتف</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody id="empBody"></tbody></table></div></div>`;
+  loadEmployees();
+}
+
+async function loadEmployees() {
+  const q = (document.getElementById('searchEmp')?.value || '').toLowerCase();
+  const filter = document.getElementById('filterStatus')?.value || 'all';
+  const snap = await db.collection('employees').get();
+  empBody.innerHTML = '';
+  snap.forEach(doc => {
+    const e = doc.data();
+    const isArchived = e.status === 'مؤرشف';
+    if (filter === 'active' && isArchived) return;
+    if (filter === 'archived' && !isArchived) return;
+    if (q && !Object.values(e).some(v => String(v).toLowerCase().includes(q))) return;
+    const statusBadge = isArchived ? '<span class="badge bg-secondary">مؤرشف</span>' : (e.status === 'غير نشط' ? '<span class="badge bg-danger">غير نشط</span>' : '<span class="badge bg-success">نشط</span>');
+    empBody.innerHTML += `<tr class="${isArchived ? 'archived-row' : ''}">
+      <td>${e.photo ? `<img src="${e.photo}" class="avatar">` : ''}</td><td>${e.firstName||''} ${e.lastName||''}</td><td>${e.dept||''}</td><td>${e.jobTitle||''}</td><td>${e.phone||''}</td><td>${statusBadge}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-info" onclick="viewEmployee('${doc.id}')" title="عرض"><i class="fas fa-eye"></i></button>
+        <button class="btn btn-sm btn-outline-warning" onclick="editEmployee('${doc.id}')" title="تعديل"><i class="fas fa-edit"></i></button>
+        ${isArchived ? 
+          `<button class="btn btn-sm btn-outline-success" onclick="restoreEmployee('${doc.id}')" title="استعادة"><i class="fas fa-undo"></i></button>` :
+          `<button class="btn btn-sm btn-outline-dark" onclick="archiveEmployee('${doc.id}')" title="أرشفة"><i class="fas fa-archive"></i></button>
+           <button class="btn btn-sm btn-outline-danger" onclick="deleteEmployee('${doc.id}')" title="حذف"><i class="fas fa-trash"></i></button>`
+        }
+        <button class="btn btn-sm btn-outline-secondary" onclick="printCard('${doc.id}')" title="بطاقة"><i class="fas fa-id-card"></i></button>
+      </td></tr>`;
+  });
+}
+
+async function archiveEmployee(id) {
+  if (confirm('هل تريد أرشفة هذا الموظف؟')) {
+    await db.collection('employees').doc(id).update({ status: 'مؤرشف' });
+    await addLog('أرشفة موظف', 'تم نقل الموظف إلى الأرشيف');
+    loadEmployees(); loadDashboard();
+  }
+}
+async function restoreEmployee(id) {
+  if (confirm('استعادة الموظف من الأرشيف؟')) {
+    await db.collection('employees').doc(id).update({ status: 'نشط' });
+    await addLog('استعادة موظف', 'تم استعادة الموظف من الأرشيف');
+    loadEmployees(); loadDashboard();
+  }
+}
+
+// ========== عرض التفاصيل ==========
+async function viewEmployee(id) {
+  const emp = (await db.collection('employees').doc(id).get()).data();
+  const fieldLabels = {
+    firstName: 'الاسم', lastName: 'الكنية', fatherName: 'اسم الأب', motherName: 'اسم الأم',
+    phone: 'الهاتف', location: 'المكان', birthDate: 'تاريخ الولادة', regPlace: 'مكان القيد',
+    dept: 'القسم', jobTitle: 'المسمى', hireDate: 'تاريخ التعيين', contractType: 'نوع العقد',
+    contractEnd: 'تاريخ انتهاء العقد', status: 'الحالة الوظيفية', education: 'المؤهل العلمي',
+    salary: 'الراتب الأساسي', email: 'البريد الإلكتروني', maritalStatus: 'الحالة العائلية',
+    children: 'عدد الأولاد',
+    chamCashNumber: 'رقم شام كاش',
+    paymentMethod: 'طريقة الدفع'
+  };
+  let detailsHTML = '';
+  Object.keys(fieldLabels).forEach(key => {
+    detailsHTML += `<div class="col-md-6 mb-2"><span class="detail-label">${fieldLabels[key]}:</span> ${emp[key]||'-'}</div>`;
+  });
+  const docsSnap = await db.collection('employees').doc(id).collection('documents').get();
+  let docsHTML = '';
+  docsSnap.forEach(doc => { const d = doc.data(); docsHTML += `<div class="document-item"><span>📄 ${d.name}</span><button class="btn btn-sm btn-outline-info" onclick="window.open('${d.url}')">عرض</button></div>`; });
+  const leavesSnap = await db.collection('leaves').where('employeeId','==',id).get();
+  let leavesHTML = '';
+  leavesSnap.forEach(doc => { const l = doc.data(); const days = Math.ceil((new Date(l.endDate) - new Date(l.startDate)) / (1000*60*60*24)) + 1; leavesHTML += `<tr><td>${l.type}</td><td>${l.startDate}</td><td>${l.endDate}</td><td>${days} يوم</td><td>${l.status}</td></tr>`; });
+  const modalHTML = `
+    <div class="modal fade" id="viewModal"><div class="modal-dialog modal-xl"><div class="modal-content">
+      <div class="modal-header"><h5>تفاصيل الموظف</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-4 text-center">
+            ${emp.photo ? `<img src="${emp.photo}" class="avatar" style="width:120px;height:120px">` : ''}
+            <h5 class="mt-2">${emp.firstName} ${emp.lastName}</h5><p>${emp.jobTitle||''}</p>
+            <span class="badge bg-${emp.status==='مؤرشف'?'secondary':(emp.status==='غير نشط'?'danger':'success')}">${emp.status||'نشط'}</span>
+            <div class="mt-3">
+              <button class="btn btn-outline-gold btn-sm" onclick="printIDCard('${id}')"><i class="fas fa-print"></i> طباعة الهوية</button>
+              <button class="btn btn-outline-gold btn-sm mt-1" onclick="printEmployeeInfo('${id}')"><i class="fas fa-id-card"></i> طباعة البطاقة</button>
+            </div>
+          </div>
+          <div class="col-md-8"><div class="row">${detailsHTML}</div></div>
+        </div>
+        <hr><h6>صور الهوية</h6>
+        <div class="row"><div class="col-md-6 text-center">${emp.idFrontPhoto ? `<img src="${emp.idFrontPhoto}" class="id-photo">` : 'لا توجد'}</div><div class="col-md-6 text-center">${emp.idBackPhoto ? `<img src="${emp.idBackPhoto}" class="id-photo">` : 'لا توجد'}</div></div>
+        <hr><h6>المستندات الإضافية</h6>
+        <div id="docsList">${docsHTML || '<p class="text-muted">لا توجد مستندات</p>'}</div>
+        <button class="btn btn-sm btn-outline-gold mt-2" onclick="uploadDocument('${id}')">+ رفع مستند</button>
+        <hr><h6>سجل الإجازات</h6>
+        <div class="table-responsive"><table class="table table-sm"><thead><tr><th>النوع</th><th>من</th><th>إلى</th><th>المدة</th><th>الحالة</th></tr></thead><tbody>${leavesHTML || '<tr><td colspan="5">لا توجد إجازات</td></tr>'}</tbody></table></div>
+      </div>
+    </div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  new bootstrap.Modal(document.getElementById('viewModal')).show();
+  document.getElementById('viewModal').addEventListener('hidden.bs.modal', () => document.getElementById('viewModal').remove());
+}
+
+async function uploadDocument(empId) {
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = '.pdf,.jpg,.png,.doc,.docx';
+  fileInput.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      await db.collection('employees').doc(empId).collection('documents').add({
+        name: file.name,
+        url: ev.target.result,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      alert('تم رفع المستند بنجاح');
+      bootstrap.Modal.getInstance(document.getElementById('viewModal')).hide();
+      document.getElementById('viewModal').remove();
+      viewEmployee(empId);
+    };
+    reader.readAsDataURL(file);
+  };
+  fileInput.click();
+}
+
+async function printIDCard(id) {
+  const emp = (await db.collection('employees').doc(id).get()).data();
+  const w = window.open('', '', 'width=800,height=600');
+  w.document.write(`<html dir="rtl"><head><style>body{font-family:Tahoma;text-align:center;margin:0;padding:20px}h3{color:#1B3A5C}.id-card{display:flex;justify-content:center;gap:30px;margin-top:20px}.id-card img{width:350px;height:220px;object-fit:cover;border:2px solid #988561;border-radius:8px}</style></head><body><h3>${emp.firstName} ${emp.lastName} - صورة الهوية</h3><div class="id-card">${emp.idFrontPhoto?`<div><p>الوجه الأمامي</p><img src="${emp.idFrontPhoto}"></div>`:'<p>لا توجد صورة أمامية</p>'}${emp.idBackPhoto?`<div><p>الوجه الخلفي</p><img src="${emp.idBackPhoto}"></div>`:'<p>لا توجد صورة خلفية</p>'}</div><script>window.print()</`+`script></body></html>`);
+}
+
+async function printEmployeeInfo(id) {
+  const emp = (await db.collection('employees').doc(id).get()).data();
+  const fieldLabels = {
+    firstName: 'الاسم', lastName: 'الكنية', fatherName: 'اسم الأب', motherName: 'اسم الأم',
+    phone: 'الهاتف', location: 'المكان', birthDate: 'تاريخ الولادة', regPlace: 'مكان القيد',
+    dept: 'القسم', jobTitle: 'المسمى', hireDate: 'تاريخ التعيين', contractType: 'نوع العقد',
+    contractEnd: 'تاريخ انتهاء العقد', status: 'الحالة الوظيفية', education: 'المؤهل العلمي',
+    salary: 'الراتب الأساسي', email: 'البريد الإلكتروني', maritalStatus: 'الحالة العائلية',
+    children: 'عدد الأولاد',
+    chamCashNumber: 'رقم شام كاش',
+    paymentMethod: 'طريقة الدفع'
+  };
+  let rows = '';
+  Object.keys(fieldLabels).forEach(key => { rows += `<tr><td style="font-weight:bold;background:#f4f6f9;padding:8px">${fieldLabels[key]}</td><td style="padding:8px">${emp[key]||'-'}</td></tr>`; });
+  const w = window.open('', '', 'width=700,height=600');
+  w.document.write(`<html dir="rtl"><head><style>body{font-family:Tahoma;padding:20px;text-align:center}h3{color:#1B3A5C}table{margin:20px auto;border-collapse:collapse;width:90%}td{border:1px solid #ddd}</style></head><body>${emp.photo?`<img src="${emp.photo}" style="width:100px;height:100px;border-radius:50%;border:2px solid #988561;object-fit:cover">`:''}<h3>${emp.firstName} ${emp.lastName}</h3><p>${emp.jobTitle||''}</p><table>${rows}</table><script>window.print()</`+`script></body></html>`);
+}
+
+function openEmployeeModal(id = null) {
+  editingId = id;
+  (id ? db.collection('employees').doc(id).get() : Promise.resolve({ data: () => ({}) })).then(doc => {
+    const e = id ? doc.data() : {};
+    empPhoto = e.photo || ''; idFrontPhoto = e.idFrontPhoto || ''; idBackPhoto = e.idBackPhoto || '';
+    let form = '<div class="row g-3">';
+    fields.forEach(f => form += `<div class="col-md-4"><label class="form-label">${f[1]}</label><input class="form-control" id="${f[0]}" value="${e[f[0]]||''}" ${f[0].includes('Date')?'type="date"':''}></div>`);
+    form += `<div class="col-md-4"><label>الصورة الشخصية</label><input type="file" id="photoFile" class="form-control" onchange="preview('photo')" accept="image/*"><img id="photoPreview" class="avatar mt-2" style="width:70px;height:70px;display:${empPhoto?'block':'none'}" src="${empPhoto}"></div>
+      <div class="col-md-4"><label>الهوية (أمام)</label><input type="file" id="idFrontFile" class="form-control" onchange="preview('idFront')" accept="image/*"><img id="idFrontPreview" class="id-photo mt-2" style="display:${idFrontPhoto?'block':'none'}" src="${idFrontPhoto}"></div>
+      <div class="col-md-4"><label>الهوية (خلف)</label><input type="file" id="idBackFile" class="form-control" onchange="preview('idBack')" accept="image/*"><img id="idBackPreview" class="id-photo mt-2" style="display:${idBackPhoto?'block':'none'}" src="${idBackPhoto}"></div>
+      <div class="col-12"><label>وثيقة المؤهل (PDF)</label><input type="file" id="eduDoc" class="form-control" accept=".pdf"></div></div>`;
+    const modalHTML = `<div class="modal fade" id="empModal"><div class="modal-dialog modal-xl"><div class="modal-content"><div class="modal-header"><h5>${id?'تعديل':'إضافة'} موظف</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body">${form}</div><div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button><button class="btn btn-gold" onclick="saveEmployee()">حفظ</button></div></div></div></div>`;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    new bootstrap.Modal(document.getElementById('empModal')).show();
+    document.getElementById('empModal').addEventListener('hidden.bs.modal', () => document.getElementById('empModal').remove());
+  });
+}
+function preview(type) {
+  const file = document.getElementById(type === 'photo' ? 'photoFile' : (type === 'idFront' ? 'idFrontFile' : 'idBackFile')).files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    if (type === 'photo') empPhoto = e.target.result;
+    else if (type === 'idFront') idFrontPhoto = e.target.result;
+    else idBackPhoto = e.target.result;
+    const previewId = type === 'photo' ? 'photoPreview' : (type === 'idFront' ? 'idFrontPreview' : 'idBackPreview');
+    document.getElementById(previewId).src = e.target.result;
+    document.getElementById(previewId).style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+async function saveEmployee() {
+  const data = {};
+  fields.forEach(f => data[f[0]] = document.getElementById(f[0])?.value || '');
+  data.photo = empPhoto; data.idFrontPhoto = idFrontPhoto; data.idBackPhoto = idBackPhoto;
+  const eduFile = document.getElementById('eduDoc')?.files[0];
+  if (eduFile) {
+    const reader = new FileReader();
+    reader.onload = async (ev) => { data.educationDoc = ev.target.result; await saveToDb(data); };
+    reader.readAsDataURL(eduFile);
+  } else { await saveToDb(data); }
+}
+async function saveToDb(data) {
+  if (editingId) { await db.collection('employees').doc(editingId).update(data); await addLog('تعديل موظف', `تم تعديل بيانات ${data.firstName} ${data.lastName}`); }
+  else { await db.collection('employees').add(data); await addLog('إضافة موظف', `تم إضافة ${data.firstName} ${data.lastName}`); }
+  bootstrap.Modal.getInstance(document.getElementById('empModal')).hide();
+  document.getElementById('empModal').remove();
+  loadEmployees(); loadDashboard();
+}
+async function editEmployee(id) { openEmployeeModal(id); }
+async function deleteEmployee(id) {
+  if (confirm('هل أنت متأكد من حذف هذا الموظف؟')) {
+    const emp = (await db.collection('employees').doc(id).get()).data();
+    await db.collection('employees').doc(id).delete();
+    await addLog('حذف موظف', `تم حذف ${emp.firstName} ${emp.lastName}`);
+    loadEmployees(); loadDashboard();
+  }
+}
+async function printCard(id) {
+  const emp = (await db.collection('employees').doc(id).get()).data();
+  const w = window.open('', '', 'width=400,height=600');
+  w.document.write(`<html dir="rtl"><head><style>body{font-family:Tahoma;text-align:center;padding:20px;margin:0}.card{border:3px solid #988561;border-radius:16px;padding:20px;width:320px;margin:20px auto}img{width:100px;height:100px;border-radius:50%;border:2px solid #988561;object-fit:cover}h4{color:#1B3A5C;margin:10px 0 5px}p{margin:3px 0;color:#555}</style></head><body><div class="card">${emp.photo?`<img src="${emp.photo}">`:''}<h4>${emp.firstName} ${emp.lastName}</h4><p>${emp.jobTitle||''} - ${emp.dept||''}</p><p>الرقم: ${emp.empId||''}</p><p>📞 ${emp.phone||''}</p><p>📅 ${emp.hireDate||''}</p></div><script>window.print()</`+`script></body></html>`);
+}
+
+// ========== الرواتب ==========
+async function loadSalariesPage() {
+  mainContent.innerHTML = `
+    <h4 class="section-title"><i class="fas fa-money-bill-wave"></i> إدارة الرواتب</h4>
+    <div class="card mb-3"><div class="card-header">كشف الراتب الشهري <button class="btn btn-gold btn-sm" onclick="generateSalarySheet()">إنشاء كشف جديد</button></div>
+    <div class="card-body" id="salarySheetPreview"><p class="text-muted">اختر شهراً لإنشاء كشف الرواتب</p></div></div>
+    <div class="card"><div class="card-header">سجل صرف الرواتب</div><div class="table-responsive"><table class="table"><thead><tr><th>الشهر</th><th>عدد الموظفين</th><th>الإجمالي</th><th>التاريخ</th><th>طباعة</th><th>حذف</th></tr></thead><tbody id="salaryHistoryBody"></tbody></table></div></div>`;
+  loadSalaryHistory();
+}
+
+async function generateSalarySheet() {
+  const now = new Date();
+  const month = prompt('أدخل الشهر والسنة (مثال: 2025-01):', `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`);
+  if (!month) return;
+  const snap = await db.collection('employees').get();
+  const employees = [];
+  snap.forEach(doc => {
+    const e = doc.data();
+    if (e.status !== 'مؤرشف') employees.push({ id: doc.id, ...e });
+  });
+  let totalSalaries = 0;
+  let rows = '';
+  employees.forEach(e => {
+    const salary = parseFloat(e.salary) || 0;
+    const allowances = parseFloat(e.allowances) || 0;
+    const deductions = 0;
+    const net = salary + allowances - deductions;
+    totalSalaries += net;
+    rows += `<tr>
+      <td>${e.firstName} ${e.lastName}</td><td>${e.dept||''}</td>
+      <td>${salary.toLocaleString()} ل.س</td><td>${allowances.toLocaleString()} ل.س</td>
+      <td>${deductions.toLocaleString()} ل.س</td><td><strong>${net.toLocaleString()} ل.س</strong></td>
+      <td>${e.chamCashNumber||'-'}</td><td>${e.paymentMethod||'شام كاش'}</td>
+    </tr>`;
+  });
+  const sheetHTML = `
+    <img src="${EMBLEM_URL}" width="80"><h3>مديرية مياه تل أبيض</h3>
+    <h4>كشف الرواتب الشهري - ${month}</h4>
+    <table class="table">
+      <thead><tr><th>الموظف</th><th>القسم</th><th>الراتب الأساسي</th><th>البدلات</th><th>الاستقطاعات</th><th>الصافي</th><th>شام كاش</th><th>طريقة الدفع</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><th colspan="5">الإجمالي</th><th>${totalSalaries.toLocaleString()} ل.س</th><th colspan="2"></th></tr></tfoot>
+    </table>`;
+  document.getElementById('salarySheetPreview').innerHTML = sheetHTML + `
+    <div class="mt-3 d-flex gap-2">
+      <button class="btn btn-gold btn-sm" onclick="saveSalarySheet('${month}', ${totalSalaries}, '${sheetHTML.replace(/'/g, "\\'")}', ${employees.length})">💾 اعتماد وحفظ الكشف</button>
+      <button class="btn btn-outline-gold btn-sm" onclick="printReportContent(lastReportHTML)">🖨️ طباعة الكشف</button>
+    </div>`;
+  lastReportHTML = sheetHTML;
+}
+
+async function saveSalarySheet(month, total, html, empCount) {
+  await db.collection('salaries').add({
+    month, total, html, empCount,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  await addLog('اعتماد كشف رواتب', `كشف رواتب ${month} بإجمالي ${total.toLocaleString()} ل.س`);
+  loadSalariesPage();
+}
+
+async function loadSalaryHistory() {
+  const snap = await db.collection('salaries').orderBy('createdAt','desc').get();
+  salaryHistoryBody.innerHTML = '';
+  snap.forEach(doc => {
+    const s = doc.data();
+    salaryHistoryBody.innerHTML += `<tr>
+      <td>${s.month}</td>
+      <td>${s.empCount || '-'}</td>
+      <td>${(s.total||0).toLocaleString()} ل.س</td>
+      <td>${s.createdAt ? new Date(s.createdAt.seconds*1000).toLocaleDateString('ar-SY') : '-'}</td>
+      <td><button class="btn btn-sm btn-outline-gold" onclick="printReportContent('${s.html.replace(/'/g, "\\'")}')">🖨️ طباعة</button></td>
+      <td><button class="btn btn-sm btn-outline-danger" onclick="deleteSalarySheet('${doc.id}')"><i class="fas fa-trash"></i></button></td>
+    </tr>`;
+  });
+}
+
+async function deleteSalarySheet(id) {
+  if (confirm('حذف كشف الرواتب؟')) {
+    await db.collection('salaries').doc(id).delete();
+    await addLog('حذف كشف رواتب', 'تم حذف كشف رواتب');
+    loadSalariesPage();
+  }
+}
+
+// ========== الجباية ==========
+async function loadCollectionsPage() {
+  mainContent.innerHTML = `
+    <h4 class="section-title"><i class="fas fa-coins"></i> الجباية</h4>
+    <div class="row mb-3">
+      <div class="col-md-4"><div class="card"><div class="card-header">المشتركين <button class="btn btn-gold btn-sm" onclick="openSubscriberModal()">+ إضافة</button></div><div class="table-responsive"><table class="table"><thead><tr><th>الاسم</th><th>المنطقة</th><th>رقم الحساب</th><th>إجراءات</th></tr></thead><tbody id="subsBody"></tbody></table></div></div></div>
+      <div class="col-md-8"><div class="card"><div class="card-header">آخر الفواتير والتحصيلات</div><div class="table-responsive"><table class="table"><thead><tr><th>المشترك</th><th>الفاتورة</th><th>المبلغ</th><th>تاريخ</th><th>دفع</th></tr></thead><tbody id="invoicesBody"></tbody></table></div></div></div>
+    </div>`;
+  loadSubscribers();
+  loadInvoices();
+}
+
+async function loadSubscribers() {
+  const snap = await db.collection('subscribers').get();
+  subsBody.innerHTML = '';
+  snap.forEach(doc => {
+    const s = doc.data();
+    subsBody.innerHTML += `<tr>
+      <td>${s.name}</td><td>${s.area||''}</td><td>${s.accountNumber||''}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-warning" onclick="editSubscriber('${doc.id}')"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteSubscriber('${doc.id}')"><i class="fas fa-trash"></i></button>
+        <button class="btn btn-sm btn-outline-info" onclick="createInvoice('${doc.id}')">فاتورة</button>
+      </td></tr>`;
+  });
+}
+
+function openSubscriberModal(id = null) {
+  (id ? db.collection('subscribers').doc(id).get() : Promise.resolve({ data: () => ({}) })).then(doc => {
+    const s = id ? doc.data() : {};
+    const modalHTML = `
+      <div class="modal fade" id="subModal"><div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header"><h5>${id?'تعديل':'إضافة'} مشترك</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <input id="subName" class="form-control mb-2" placeholder="اسم المشترك" value="${s.name||''}">
+          <input id="subArea" class="form-control mb-2" placeholder="المنطقة" value="${s.area||''}">
+          <input id="subAccount" class="form-control mb-2" placeholder="رقم الحساب" value="${s.accountNumber||''}">
+        </div>
+        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button><button class="btn btn-gold" onclick="saveSubscriber('${id||''}')">حفظ</button></div>
+      </div></div></div>`;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    new bootstrap.Modal(document.getElementById('subModal')).show();
+    document.getElementById('subModal').addEventListener('hidden.bs.modal', () => document.getElementById('subModal').remove());
+  });
+}
+
+async function saveSubscriber(id) {
+  const data = {
+    name: document.getElementById('subName').value,
+    area: document.getElementById('subArea').value,
+    accountNumber: document.getElementById('subAccount').value
+  };
+  if (id) { await db.collection('subscribers').doc(id).update(data); }
+  else { await db.collection('subscribers').add(data); }
+  bootstrap.Modal.getInstance(document.getElementById('subModal')).hide();
+  document.getElementById('subModal').remove();
+  loadCollectionsPage();
+}
+
+async function editSubscriber(id) { openSubscriberModal(id); }
+
+async function deleteSubscriber(id) {
+  if (confirm('حذف المشترك؟')) {
+    await db.collection('subscribers').doc(id).delete();
+    loadCollectionsPage();
+  }
+}
+
+async function createInvoice(subId) {
+  const subSnap = await db.collection('subscribers').doc(subId).get();
+  const sub = subSnap.data();
+  const prevReading = prompt('القراءة السابقة:');
+  const currentReading = prompt('القراءة الحالية:');
+  const rate = prompt('سعر المتر المكعب (ل.س):', '500');
+  if (!prevReading || !currentReading || !rate) return;
+  const consumption = parseFloat(currentReading) - parseFloat(prevReading);
+  const amount = consumption * parseFloat(rate);
+  await db.collection('invoices').add({
+    subscriberId: subId,
+    subscriberName: sub.name,
+    prevReading, currentReading, consumption, rate, amount,
+    date: new Date().toISOString().slice(0,10),
+    status: 'غير مدفوعة'
+  });
+  loadCollectionsPage();
+}
+
+async function loadInvoices() {
+  const snap = await db.collection('invoices').orderBy('date','desc').limit(10).get();
+  invoicesBody.innerHTML = '';
+  snap.forEach(doc => {
+    const inv = doc.data();
+    invoicesBody.innerHTML += `<tr>
+      <td>${inv.subscriberName}</td>
+      <td>${inv.consumption} م³ × ${inv.rate} ل.س</td>
+      <td>${inv.amount.toLocaleString()} ل.س</td>
+      <td>${inv.date}</td>
+      <td>${inv.status === 'مدفوعة' ? '<span class="badge bg-success">مدفوعة</span>' :
+        `<button class="btn btn-sm btn-outline-gold" onclick="payInvoice('${doc.id}')">تسديد</button>`}
+        <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteInvoice('${doc.id}')"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`;
+  });
+}
+
+async function payInvoice(invId) {
+  if (confirm('تأكيد استلام الدفع؟')) {
+    await db.collection('invoices').doc(invId).update({ status: 'مدفوعة', paidDate: new Date().toISOString().slice(0,10) });
+    await addLog('تحصيل فاتورة', `تم تحصيل فاتورة ${invId}`);
+    loadCollectionsPage();
+  }
+}
+
+async function deleteInvoice(invId) {
+  if (confirm('حذف الفاتورة؟')) {
+    await db.collection('invoices').doc(invId).delete();
+    loadCollectionsPage();
+  }
+}
+
+// ========== السجلات المحاسبية ==========
+async function loadAccountingPage() {
+  mainContent.innerHTML = `
+    <h4 class="section-title"><i class="fas fa-book"></i> السجلات المحاسبية</h4>
+    <div class="card mb-3"><div class="card-header">دفتر اليومية <button class="btn btn-gold btn-sm" onclick="addJournalEntry()">+ إضافة قيد</button></div>
+    <div class="table-responsive"><table class="table"><thead><tr><th>التاريخ</th><th>رقم القيد</th><th>البيان</th><th>مدين</th><th>دائن</th><th>المبلغ</th><th>إجراءات</th></tr></thead><tbody id="journalBody"></tbody></table></div></div>`;
+  loadJournal();
+}
+
+function addJournalEntry(id = null) {
+  (id ? db.collection('journal').doc(id).get() : Promise.resolve({ data: () => ({}) })).then(doc => {
+    const j = id ? doc.data() : {};
+    const modalHTML = `
+      <div class="modal fade" id="journalModal"><div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header"><h5>${id?'تعديل':'إضافة'} قيد</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <input id="jDate" type="date" class="form-control mb-2" value="${j.date||new Date().toISOString().slice(0,10)}">
+          <input id="jDesc" class="form-control mb-2" placeholder="البيان" value="${j.description||''}">
+          <input id="jDebit" class="form-control mb-2" placeholder="الحساب المدين" value="${j.debitAccount||''}">
+          <input id="jCredit" class="form-control mb-2" placeholder="الحساب الدائن" value="${j.creditAccount||''}">
+          <input id="jAmount" type="number" class="form-control mb-2" placeholder="المبلغ (ل.س)" value="${j.amount||''}">
+        </div>
+        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button><button class="btn btn-gold" onclick="saveJournalEntry('${id||''}')">حفظ</button></div>
+      </div></div></div>`;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    new bootstrap.Modal(document.getElementById('journalModal')).show();
+    document.getElementById('journalModal').addEventListener('hidden.bs.modal', () => document.getElementById('journalModal').remove());
+  });
+}
+
+async function saveJournalEntry(id) {
+  const entry = {
+    date: document.getElementById('jDate').value,
+    description: document.getElementById('jDesc').value,
+    debitAccount: document.getElementById('jDebit').value,
+    creditAccount: document.getElementById('jCredit').value,
+    amount: parseFloat(document.getElementById('jAmount').value)
+  };
+  if (id) { await db.collection('journal').doc(id).update(entry); }
+  else { await db.collection('journal').add(entry); }
+  bootstrap.Modal.getInstance(document.getElementById('journalModal')).hide();
+  document.getElementById('journalModal').remove();
+  loadAccountingPage();
+}
+
+async function loadJournal() {
+  const snap = await db.collection('journal').orderBy('date','desc').limit(50).get();
+  journalBody.innerHTML = '';
+  snap.forEach(doc => {
+    const j = doc.data();
+    journalBody.innerHTML += `<tr>
+      <td>${j.date}</td><td>${doc.id.slice(-6)}</td><td>${j.description}</td>
+      <td>${j.debitAccount}</td><td>${j.creditAccount}</td><td>${(j.amount||0).toLocaleString()} ل.س</td>
+      <td>
+        <button class="btn btn-sm btn-outline-warning" onclick="addJournalEntry('${doc.id}')"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteJournalEntry('${doc.id}')"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`;
+  });
+}
+
+async function deleteJournalEntry(id) {
+  if (confirm('حذف القيد؟')) {
+    await db.collection('journal').doc(id).delete();
+    loadAccountingPage();
+  }
+}
+
+// ========== الإجازات ==========
+async function loadLeavesPage() {
+  mainContent.innerHTML = `
+    <div class="card"><div class="card-header"><i class="fas fa-calendar-alt"></i> الإجازات <button class="btn btn-gold btn-sm" onclick="openLeaveModal()"><i class="fas fa-plus"></i> إضافة إجازة</button></div>
+    <div class="table-responsive"><table class="table"><thead><tr><th>الموظف</th><th>النوع</th><th>من</th><th>إلى</th><th>المدة</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody id="leavesBody"></tbody></table></div></div>`;
+  await loadLeaves();
+}
+async function loadLeaves() {
+  const snap = await db.collection('leaves').get();
+  leavesBody.innerHTML = '';
+  for (const doc of snap.docs) {
+    const l = doc.data();
+    const empSnap = await db.collection('employees').doc(l.employeeId).get();
+    const emp = empSnap.data() || {};
+    const days = Math.ceil((new Date(l.endDate) - new Date(l.startDate)) / (1000*60*60*24)) + 1;
+    const statusBadge = l.status === 'مرفوض' ? '<span class="badge bg-danger">مرفوض</span>' : l.status === 'مقبول' ? '<span class="badge bg-success">مقبول</span>' : '<span class="badge bg-warning">معلق</span>';
+    leavesBody.innerHTML += `<tr><td>${emp.firstName||''} ${emp.lastName||''}</td><td>${l.type}</td><td>${l.startDate}</td><td>${l.endDate}</td><td>${days} يوم</td><td>${statusBadge}</td><td><button class="btn btn-sm btn-outline-success" onclick="updateLeave('${doc.id}','مقبول')">✅</button><button class="btn btn-sm btn-outline-danger" onclick="updateLeave('${doc.id}','مرفوض')">❌</button><button class="btn btn-sm btn-outline-dark" onclick="deleteLeave('${doc.id}')">🗑️</button></td></tr>`;
+  }
+}
+function openLeaveModal() {
+  Promise.all([db.collection('employees').get()]).then(([empSnap]) => {
+    let empOptions = '';
+    empSnap.forEach(d => { const e = d.data(); empOptions += `<option value="${d.id}">${e.firstName} ${e.lastName}</option>`; });
+    const modalHTML = `<div class="modal fade" id="leaveModal"><div class="modal-dialog"><div class="modal-content">
+      <div class="modal-header"><h5>إضافة إجازة</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <select id="leaveEmployee" class="form-select mb-3">${empOptions}</select>
+        <select id="leaveType" class="form-select mb-3"><option>سنوية</option><option>مرضية</option><option>إدارية</option><option>أمومة</option><option>غير مدفوعة</option></select>
+        <input type="date" id="leaveStart" class="form-control mb-3"><input type="date" id="leaveEnd" class="form-control mb-3">
+      </div>
+      <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button><button class="btn btn-gold" onclick="saveLeave()">حفظ</button></div>
+    </div></div></div>`;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    new bootstrap.Modal(document.getElementById('leaveModal')).show();
+    document.getElementById('leaveModal').addEventListener('hidden.bs.modal', () => document.getElementById('leaveModal').remove());
+  });
+}
+async function saveLeave() {
+  await db.collection('leaves').add({
+    employeeId: document.getElementById('leaveEmployee').value,
+    type: document.getElementById('leaveType').value,
+    startDate: document.getElementById('leaveStart').value,
+    endDate: document.getElementById('leaveEnd').value,
+    status: 'معلق'
+  });
+  await addLog('إضافة إجازة', 'تم تقديم طلب إجازة جديد');
+  bootstrap.Modal.getInstance(document.getElementById('leaveModal')).hide();
+  document.getElementById('leaveModal').remove();
+  loadLeavesPage();
+}
+async function updateLeave(id, status) {
+  await db.collection('leaves').doc(id).update({ status });
+  await addLog('تحديث إجازة', `تم تغيير حالة الإجازة إلى ${status}`);
+  loadLeavesPage();
+}
+async function deleteLeave(id) {
+  if (confirm('حذف الإجازة؟')) {
+    await db.collection('leaves').doc(id).delete();
+    await addLog('حذف إجازة', 'تم حذف طلب إجازة');
+    loadLeavesPage();
+  }
+}
+
+// ========== التقارير ==========
+async function loadReportsPage() {
+  mainContent.innerHTML = `
+    <h4 class="section-title"><i class="fas fa-chart-bar"></i> التقارير</h4>
+    <div class="row">
+      <div class="col-md-4 mb-3"><div class="card"><div class="card-header">💰 تقرير الرواتب</div><div class="card-body"><button class="btn btn-gold w-100" onclick="salaryReport()">عرض التقرير</button></div></div></div>
+      <div class="col-md-4 mb-3"><div class="card"><div class="card-header">📅 تقرير الإجازات</div><div class="card-body"><button class="btn btn-gold w-100" onclick="leavesReport()">عرض التقرير</button></div></div></div>
+      <div class="col-md-4 mb-3"><div class="card"><div class="card-header">⏳ العقود المنتهية</div><div class="card-body"><button class="btn btn-gold w-100" onclick="contractsReport()">عرض التقرير</button></div></div></div>
+    </div>
+    <div id="reportResult" class="mt-3"></div>`;
+}
+
+async function salaryReport() {
+  const snap = await db.collection('employees').get();
+  let total = 0, rows = '';
+  snap.forEach(doc => {
+    const e = doc.data();
+    if (e.status !== 'مؤرشف') { const salary = parseFloat(e.salary) || 0; total += salary; rows += `<tr><td>${e.firstName} ${e.lastName}</td><td>${e.dept||''}</td><td>${salary.toLocaleString()} ل.س</td></tr>`; }
+  });
+  lastReportHTML = `<img src="${EMBLEM_URL}" width="80"><h3>مديرية مياه تل أبيض</h3><h4>تقرير الرواتب الشهري</h4><p><strong>إجمالي الرواتب: ${total.toLocaleString()} ل.س</strong></p><table class="table"><thead><tr><th>الموظف</th><th>القسم</th><th>الراتب</th></tr></thead><tbody>${rows}</tbody></table>`;
+  document.getElementById('reportResult').innerHTML = `<div class="card"><div class="card-header">💰 تقرير الرواتب الشهري</div><div class="card-body">${lastReportHTML}<button class="btn btn-sm btn-outline-gold mt-2" onclick="printReportContent(lastReportHTML)">🖨️ طباعة التقرير فقط</button></div></div>`;
+}
+
+async function leavesReport() {
+  const leavesSnap = await db.collection('leaves').get();
+  let rows = '';
+  for (const doc of leavesSnap.docs) {
+    const l = doc.data();
+    const empSnap = await db.collection('employees').doc(l.employeeId).get();
+    const emp = empSnap.data() || {};
+    const days = Math.ceil((new Date(l.endDate) - new Date(l.startDate)) / (1000*60*60*24)) + 1;
+    rows += `<tr><td>${emp.firstName||''} ${emp.lastName||''}</td><td>${l.type}</td><td>${l.startDate}</td><td>${l.endDate}</td><td>${days} يوم</td><td>${l.status}</td></tr>`;
+  }
+  lastReportHTML = `<img src="${EMBLEM_URL}" width="80"><h3>مديرية مياه تل أبيض</h3><h4>تقرير الإجازات</h4><table class="table"><thead><tr><th>الموظف</th><th>النوع</th><th>من</th><th>إلى</th><th>المدة</th><th>الحالة</th></tr></thead><tbody>${rows}</tbody></table>`;
+  document.getElementById('reportResult').innerHTML = `<div class="card"><div class="card-header">📅 تقرير الإجازات</div><div class="card-body">${lastReportHTML}<button class="btn btn-sm btn-outline-gold mt-2" onclick="printReportContent(lastReportHTML)">🖨️ طباعة التقرير فقط</button></div></div>`;
+}
+
+async function contractsReport() {
+  const snap = await db.collection('employees').get();
+  const now = new Date();
+  let rows = '';
+  snap.forEach(doc => {
+    const e = doc.data();
+    if (e.contractEnd && new Date(e.contractEnd) < new Date(now.getTime() + 30*24*60*60*1000) && e.status !== 'مؤرشف') {
+      rows += `<tr><td>${e.firstName} ${e.lastName}</td><td>${e.dept||''}</td><td>${e.contractEnd}</td></tr>`;
+    }
+  });
+  lastReportHTML = `<img src="${EMBLEM_URL}" width="80"><h3>مديرية مياه تل أبيض</h3><h4>العقود التي ستنتهي خلال 30 يوماً</h4><table class="table"><thead><tr><th>الموظف</th><th>القسم</th><th>تاريخ الانتهاء</th></tr></thead><tbody>${rows || '<tr><td colspan="3">لا توجد عقود قريبة الانتهاء</td></tr>'}</tbody></table>`;
+  document.getElementById('reportResult').innerHTML = `<div class="card"><div class="card-header">⏳ العقود المنتهية</div><div class="card-body">${lastReportHTML}<button class="btn btn-sm btn-outline-gold mt-2" onclick="printReportContent(lastReportHTML)">🖨️ طباعة التقرير فقط</button></div></div>`;
+}
+
+// ========== سجل النشاطات ==========
+async function addLog(action, detail) {
+  await db.collection('logs').add({ action, detail, user: currentUser?.email || 'مجهول', timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+}
+async function loadLogsPage() {
+  mainContent.innerHTML = `<div class="card"><div class="card-header"><i class="fas fa-history"></i> سجل النشاطات</div><div class="table-responsive"><table class="table"><thead><tr><th>التاريخ</th><th>المستخدم</th><th>الإجراء</th><th>التفاصيل</th></tr></thead><tbody id="logsBody"></tbody></table></div></div>`;
+  const snap = await db.collection('logs').orderBy('timestamp', 'desc').limit(100).get();
+  logsBody.innerHTML = '';
+  snap.forEach(doc => {
+    const l = doc.data();
+    const date = l.timestamp ? new Date(l.timestamp.seconds * 1000).toLocaleString('ar-SY') : '-';
+    logsBody.innerHTML += `<tr><td>${date}</td><td>${l.user}</td><td>${l.action}</td><td>${l.detail}</td></tr>`;
+  });
+}
+
+// ========== تصدير Excel ==========
+async function exportExcel() {
+  const snap = await db.collection('employees').get();
+  const data = [];
+  snap.forEach(d => { const e = d.data(); data.push({ الرقم: e.empId, الاسم: e.firstName, الكنية: e.lastName, القسم: e.dept, المسمى: e.jobTitle, الهاتف: e.phone, الحالة: e.status||'نشط', 'تاريخ التعيين': e.hireDate||'' }); });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'الموظفين');
+  XLSX.writeFile(wb, 'موظفين_مياه_تل_ابيض.xlsx');
+}
+
+// ========== تصدير PDF ==========
+async function exportPDF() {
+  const snap = await db.collection('employees').get();
+  let rows = '';
+  snap.forEach(d => { const e = d.data(); rows += `<tr><td>${e.empId||''}</td><td>${e.firstName||''} ${e.lastName||''}</td><td>${e.dept||''}</td><td>${e.phone||''}</td></tr>`; });
+  const html = `<div style="text-align:center;padding:20px;font-family:Tahoma"><img src="${EMBLEM_URL}" width="80"><h3>مديرية مياه تل أبيض</h3><h4>كشف بأسماء الموظفين</h4><table border="1" cellpadding="8" style="width:100%;border-collapse:collapse"><tr style="background:#1B3A5C;color:white"><th>الرقم</th><th>الاسم</th><th>القسم</th><th>الهاتف</th></tr>${rows}</table></div>`;
+  const div = document.createElement('div'); div.innerHTML = html; div.style.position='absolute'; div.style.right='-9999px'; div.style.width='1000px'; document.body.appendChild(div);
+  await new Promise(resolve => setTimeout(resolve, 500));
+  const canvas = await html2canvas(div, { scale: 2 }); document.body.removeChild(div);
+  const imgData = canvas.toDataURL('image/png');
+  const pdf = new jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const imgWidth = 190;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+  pdf.save('موظفين_مياه_تل_ابيض.pdf');
+}
+
+// ========== نسخ احتياطي ==========
+async function downloadBackup() {
+  const snap = await db.collection('employees').get();
+  const data = []; snap.forEach(d => data.push(d.data()));
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'backup_employees.json'; a.click();
+  await addLog('نسخ احتياطي', 'تم إنشاء نسخة احتياطية من بيانات الموظفين');
+}
+</script>
+</body>
+</html>
